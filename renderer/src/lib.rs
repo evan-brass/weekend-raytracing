@@ -22,7 +22,7 @@ struct Color {
 impl Default for Color {
 	fn default() -> Self {
 		Color {
-			// Debug color:
+			// Debug color  (CSS hotpink)
 			red: 255,
 			green: 105,
 			blue: 180,
