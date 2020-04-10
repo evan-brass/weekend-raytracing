@@ -41,10 +41,44 @@ fn progress_safe(prog: f32) {
 
 static mut RENDER_OUTPUT: Option<Box<[u8]>> = None;
 
-fn ray_color(ray: Ray) -> Color {
-	let unit_direction = ray.direction.unit();
-	let t = 0.5*(unit_direction.y + 1.0);
-	(Vector::new(1.0, 1.0, 1.0)*(1.0-t) + Vector::new(0.5, 0.7, 1.0)*t).into()
+struct Scene {
+	pub spheres: Vec<Sphere>
+}
+impl Scene {
+	fn ray_color(&self, ray: &Ray) -> Color {
+		for sphere in self.spheres.iter() {
+			if let Some(intersection) = sphere.hit(ray) {
+				return Color::new(255, 0, 0, 255);
+			}
+		}
+		let unit_direction = ray.direction.unit();
+		let t = 0.5*(unit_direction.y + 1.0);
+		(Vector::new(1.0, 1.0, 1.0)*(1.0-t) + Vector::new(0.5, 0.7, 1.0)*t).into()
+	}
+}
+
+
+trait Hit {
+	fn hit(&self, ray: &Ray) -> Option<Vector>;
+}
+struct Sphere {
+	center: Vector,
+	radius: f32
+}
+impl Hit for Sphere {
+	fn hit(&self, ray: &Ray) -> Option<Vector> {
+		let oc = ray.origin - self.center;
+		let a = Vector::dot(&ray.direction, &ray.direction);
+		let b = 2.0 * Vector::dot(&oc, &ray.direction);
+		let c = Vector::dot(&oc, &oc) - self.radius * self.radius;
+		let discriminant = b*b - 4.0*a*c;
+		if discriminant > 0.0 {
+			// TODO: return the point of intersection instead of a default vector.
+			Some(Vector::default())
+		} else {
+			None
+		}
+	}
 }
 
 #[no_mangle]
@@ -53,10 +87,22 @@ extern "C" fn render(width: usize, height: usize) -> *const u8 {
 
 	log_safe(format!("About to render image: {}x{}", width, height).as_str());
 
-	let lower_left_corner = Vector::new(-2.0, -1.0, -1.0);
+
+	// TODO: Use real camera properties (FOV, etc.)
+	let vec_height = height as f32 * 4.0 / width as f32;
+	let lower_left_corner = Vector::new(-2.0, -(vec_height / 2.0), -1.0);
 	let horizontal = Vector::new(4.0, 0.0, 0.0);
-	let vertical = Vector::new(0.0, 2.0, 0.0);
+	let vertical = Vector::new(0.0, vec_height, 0.0);
 	let origin = Vector::default();
+
+	let scene = Scene {
+		spheres: vec![
+			Sphere {
+				center: Vector::new(0.0, 0.0, -1.0),
+				radius: 0.5
+			}
+		]
+	};
 
 	output.pixels(|x, y, color| {
 		let u = x as f32 / width as f32;
@@ -66,7 +112,7 @@ extern "C" fn render(width: usize, height: usize) -> *const u8 {
 			origin,
 			direction: lower_left_corner + horizontal*u + vertical*v
 		};
-		*color = ray_color(ray);
+		*color = scene.ray_color(&ray);
 	}, progress_safe);
 	
 	let bytes: Box<[u8]> = output.into();

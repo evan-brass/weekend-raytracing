@@ -7,10 +7,10 @@ import make_queue from './make_queue.mjs';
 		// Setup the UI:
 		const main = document.createElement('main');
 		main.innerHTML = `
-			<canvas></canvas>
 			<button>Render</button><progress max="1" style="visibility: hidden;"></progress><br>
 			<label>Aspect Ratio: <input name="aspect" type="number" min="0.1" value="1.4" step="0.1"></label><br>
 			<label>Width: <input name="width" type="number" min="0" step="1" value="500"></label>
+			<canvas></canvas>
 		`;
 		canvas = main.querySelector('canvas');
 		context = canvas.getContext('2d');
