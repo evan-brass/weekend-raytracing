@@ -18,11 +18,11 @@ impl Default for Vector {
 }
 // Vector functions:
 impl Vector {
-	pub fn squared_length(&self) -> f32 {
+	pub fn length_squared(&self) -> f32 {
 		Self::dot(self, self)
 	}
 	pub fn length(&self) -> f32 {
-		self.squared_length().sqrt()
+		self.length_squared().sqrt()
 	}
 	pub fn dot(u: &Self, v: &Self) -> f32 {
 		u.x * v.x +

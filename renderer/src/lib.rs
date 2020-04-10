@@ -48,7 +48,7 @@ impl Scene {
 	fn ray_color(&self, ray: &Ray) -> Color {
 		for sphere in self.spheres.iter() {
 			if let Some(intersection) = sphere.hit(ray) {
-				return Color::new(255, 0, 0, 255);
+				return (((intersection - sphere.center).unit() + Vector::new(1.0, 1.0, 1.0)) * 0.5).into();
 			}
 		}
 		let unit_direction = ray.direction.unit();
@@ -65,16 +65,17 @@ struct Sphere {
 	center: Vector,
 	radius: f32
 }
+// TODO: Produce a more useful intersection from the hit (position, normal, etc.)
 impl Hit for Sphere {
 	fn hit(&self, ray: &Ray) -> Option<Vector> {
 		let oc = ray.origin - self.center;
-		let a = Vector::dot(&ray.direction, &ray.direction);
-		let b = 2.0 * Vector::dot(&oc, &ray.direction);
-		let c = Vector::dot(&oc, &oc) - self.radius * self.radius;
-		let discriminant = b*b - 4.0*a*c;
+		let a = ray.direction.length_squared();
+		let half_b = Vector::dot(&oc, &ray.direction);
+		let c = oc.length_squared() - self.radius * self.radius;
+		let discriminant = half_b * half_b - a * c;
 		if discriminant > 0.0 {
-			// TODO: return the point of intersection instead of a default vector.
-			Some(Vector::default())
+			let t = (-half_b - discriminant.sqrt()) / a;
+			Some(ray.at(t))
 		} else {
 			None
 		}
