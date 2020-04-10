@@ -16,4 +16,6 @@ debug = true
 panic = 'abort'
 
 [dependencies]
-wasm-bindgen = "0.2"
+# wasm-bindgen = "0.2"
+wee_alloc = "0.4"
+# js-sys = "0.3"

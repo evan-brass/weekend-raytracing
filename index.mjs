@@ -8,9 +8,9 @@ import make_queue from './make_queue.mjs';
 		const main = document.createElement('main');
 		main.innerHTML = `
 			<canvas></canvas>
-			<button>Render</button><progress max="100" style="visibility: hidden;"></progress><br>
+			<button>Render</button><progress max="1" style="visibility: hidden;"></progress><br>
 			<label>Aspect Ratio: <input name="aspect" type="number" min="0.1" value="1"></label><br>
-			<label>Width: <input name="width" type="number" min="0" step="1" value="250"></label>
+			<label>Width: <input name="width" type="number" min="0" step="1" value="500"></label>
 		`;
 		canvas = main.querySelector('canvas');
 		context = canvas.getContext('2d');
@@ -27,13 +27,12 @@ import make_queue from './make_queue.mjs';
 		type: 'module'
 	});
 	const worker_queue = make_queue(worker);
-	
-	// Fetch + compile the renderer:
-	const renderer_module = await WebAssembly.compileStreaming(fetch('./renderer/target/wasm32-unknown-unknown/release/renderer.wasm'));
-	// Send the renderer module to the worker:
+
+	// Compile the renderer module:
+	const module = await WebAssembly.compileStreaming(fetch('./renderer/target/wasm32-unknown-unknown/release/renderer.wasm'));
 	worker.postMessage({
 		type: 'module',
-		module: renderer_module
+		module
 	});
 
 	// The main render loop:
@@ -44,15 +43,15 @@ import make_queue from './make_queue.mjs';
 			render_el.setAttribute('disabled', '');
 			progress_el.style.visibility = "visible";
 
-			// Get / apply the input properties:
+			// Get input properties:
 			const width = width_el.valueAsNumber;
 			const aspect_ratio = aspect_el.valueAsNumber;
 			const height = width / aspect_ratio;
-
+			// Apply input properties:
 			canvas.width = width;
-			canvas.height = height;
-			canvas.parentElement.getBoundingClientRect(); // Force layout after adjusting canvas dimensions - Needed at least on Chrome Canary
+			canvas.height = height; 
 
+			// Ask the worker to render:
 			worker.postMessage({
 				type: 'render',
 				width,
