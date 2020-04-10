@@ -9,11 +9,12 @@ import make_queue from './make_queue.mjs';
 		main.innerHTML = `
 			<canvas></canvas>
 			<button>Render</button><progress max="1" style="visibility: hidden;"></progress><br>
-			<label>Aspect Ratio: <input name="aspect" type="number" min="0.1" value="1"></label><br>
+			<label>Aspect Ratio: <input name="aspect" type="number" min="0.1" value="1.4" step="0.1"></label><br>
 			<label>Width: <input name="width" type="number" min="0" step="1" value="500"></label>
 		`;
 		canvas = main.querySelector('canvas');
 		context = canvas.getContext('2d');
+		context.imageSmoothingEnabled = false;
 		progress_el = main.querySelector('progress');
 		render_el = main.querySelector('button');
 		aspect_el = main.querySelector('input[name="aspect"]');
@@ -46,7 +47,7 @@ import make_queue from './make_queue.mjs';
 			// Get input properties:
 			const width = width_el.valueAsNumber;
 			const aspect_ratio = aspect_el.valueAsNumber;
-			const height = width / aspect_ratio;
+			const height = Math.floor(width / aspect_ratio);
 			// Apply input properties:
 			canvas.width = width;
 			canvas.height = height; 

@@ -4,6 +4,7 @@ use std::convert::Into;
 use crate::image::Color;
 
 #[derive(Clone, Copy)]
+#[derive(Debug)]
 pub struct Vector {
 	pub x: f32,
 	pub y: f32,

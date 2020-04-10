@@ -6,6 +6,7 @@ use std::convert::Into;
 #[repr(packed)]
 #[repr(C)]
 #[derive(Clone, Copy)]
+#[derive(Debug)]
 pub struct Color {
 	pub red: u8,
 	pub green: u8,
@@ -25,6 +26,7 @@ impl Default for Color {
 }
 
 // Image:
+#[derive(Debug)]
 pub struct Image {
 	pub width: usize,
 	pub height: usize,
@@ -46,7 +48,7 @@ impl Image {
 		let length = self.data.len();
 		for (ind, item) in self.data.iter_mut().enumerate() {
 			let x = ind % width;
-			let y = height - ind / height;
+			let y = height - ind / width;
 
 			f(x, y, item);
 

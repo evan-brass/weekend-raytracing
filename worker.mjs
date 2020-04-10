@@ -7,6 +7,7 @@ let ready_for_progress = true;
 
 // Run:
 (async () => {
+	let memory;
 	const imports = {
 		env: {
 			progress(progress) {
@@ -18,8 +19,15 @@ let ready_for_progress = true;
 					// Produce progress messages at most every 20ms.  The overhead of postMessage was really slowing down rendering.
 					// A better way of doing progress would be to use a shared array buffer so that the main thread could read the progress directly from the worker while it's running.  Currently the wasm has to call out to JS at each progress point which slows it down.  Also, the shared array would allow the main thread to use animation frames to only get the updates that it needs.
 					ready_for_progress = false;
-					setTimeout(() => ready_for_progress = true, 20);
+					setTimeout(() => ready_for_progress = true, 30);
 				}
+			},
+			console_log(ptr, len) {
+				const decoder = new TextDecoder('utf8', {
+					fatal: true
+				});
+				const buff = memory.buffer.slice(ptr, ptr + len);
+				console.log(decoder.decode(buff));
 			}
 		}
 	};
@@ -31,7 +39,8 @@ let ready_for_progress = true;
 			break;
 		}
 	}
-	const { render, memory } = instance.exports;
+	const { render } = instance.exports;
+	memory = instance.exports.memory;
 	// await init();
 
 	while (true) {
@@ -44,8 +53,6 @@ let ready_for_progress = true;
 				// Call the renderer:
 				const ptr = render(width, height);
 				const data = new Uint8Array(memory.buffer.slice(ptr, ptr + length));
-				console.log(ptr);
-				console.log(data);
 
 				// Return the data:
 				postMessage({
