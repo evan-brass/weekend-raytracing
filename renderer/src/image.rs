@@ -5,22 +5,22 @@ use std::convert::Into;
 // Color:
 #[repr(packed)]
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Color {
 	pub red: u8,
 	pub green: u8,
 	pub blue: u8,
 	pub alpha: u8
 }
+impl Color {
+	pub fn new(red: u8, green: u8, blue: u8, alpha: u8) -> Self {
+		Color { red, green, blue, alpha }
+	}
+}
 impl Default for Color {
 	fn default() -> Self {
-		Color {
-			// Debug color  (CSS hotpink)
-			red: 255,
-			green: 105,
-			blue: 180,
-			alpha: 255
-		}
+		// Debug color (CSS hotpink)
+		Self::new(255, 105, 180, 255)
 	}
 }
 
