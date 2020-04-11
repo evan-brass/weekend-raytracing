@@ -8,7 +8,7 @@ import make_queue from './make_queue.mjs';
 		const main = document.createElement('main');
 		main.innerHTML = `
 			<button>Render</button><progress max="1" style="visibility: hidden;"></progress><br>
-			<label>Aspect Ratio: <input name="aspect" type="number" min="0.1" value="1.4" step="0.1"></label><br>
+			<label>Aspect Ratio: <input name="aspect" type="number" min="0.1" value="0.7" step="0.1"></label><br>
 			<label>Width: <input name="width" type="number" min="0" step="1" value="500"></label>
 			<canvas></canvas>
 		`;
@@ -47,7 +47,7 @@ import make_queue from './make_queue.mjs';
 			// Get input properties:
 			const width = width_el.valueAsNumber;
 			const aspect_ratio = aspect_el.valueAsNumber;
-			const height = Math.floor(width / aspect_ratio);
+			const height = Math.floor(aspect_ratio * width);
 			// Apply input properties:
 			canvas.width = width;
 			canvas.height = height; 
@@ -56,7 +56,7 @@ import make_queue from './make_queue.mjs';
 			worker.postMessage({
 				type: 'render',
 				width,
-				height
+				aspect: aspect_ratio
 			});
 
 			// Wait for progress and render-finished messages

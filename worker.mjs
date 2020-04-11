@@ -3,7 +3,7 @@ import make_queue from './make_queue.mjs';
 
 const queue = make_queue(self);
 
-let ready_for_progress = true;
+let last_progress = false;
 
 // Run:
 (async () => {
@@ -11,15 +11,13 @@ let ready_for_progress = true;
 	const imports = {
 		env: {
 			set_progress(progress) {
-				if (ready_for_progress) {
+				let now = Date.now();
+				if (!last_progress || last_progress + 20 < now) {
 					postMessage({
 						type: 'progress',
 						progress
 					});
-					// Produce progress messages at most every 30ms.  The overhead of postMessage was really slowing down rendering.
-					// A better way of doing progress would be to use a shared array buffer so that the main thread could read the progress directly from the worker while it's running.  Currently the wasm has to call out to JS at each progress point which slows it down.  Also, the shared array would allow the main thread to use animation frames to only get the updates that it needs.
-					ready_for_progress = false;
-					setTimeout(() => ready_for_progress = true, 30);
+					last_progress = now;
 				}
 			},
 			get_random(ptr, len) {
@@ -45,19 +43,21 @@ let ready_for_progress = true;
 			break;
 		}
 	}
-	const { render } = instance.exports;
+	const { init, render } = instance.exports;
 	memory = instance.exports.memory;
-	// await init();
+
+	// Let the module do any initialization
+	init();
 
 	while (true) {
 		// Main render loop - wait for render messages:
 		for await (const msg of queue) {
 			if (msg.type == 'render') {
-				const { width, height } = msg;
-				const length = width * height * 4;
+				const { width, aspect } = msg;
+				const length = width * width * aspect * 4;
 
 				// Call the renderer:
-				const ptr = render(width, height);
+				const ptr = render(aspect, width);
 				const data = new Uint8Array(memory.buffer.slice(ptr, ptr + length));
 
 				// Return the data:

@@ -1,6 +1,4 @@
 use std::convert::Into;
-// use wasm_bindgen::prelude::*;
-// use js_sys;
 
 // Color:
 #[repr(packed)]
@@ -28,8 +26,8 @@ impl Default for Color {
 // Image:
 #[derive(Debug)]
 pub struct Image {
-	pub width: usize,
-	pub height: usize,
+	width: usize,
+	height: usize,
 	data: Box<[Color]>
 }
 impl Image {
@@ -42,18 +40,20 @@ impl Image {
 			data
 		}
 	}
-	pub fn pixels<F: Fn(usize, usize, &mut Color), P: Fn(f32)>(&mut self, f: F, p: P) {
+	pub fn set(&mut self, x: usize, y: usize, color: Color) {
+		if x >= self.width || y >= self.height {
+			panic!("Set called with invalid location: x: {}, y: {} but image is {}x{}", x, y, self.width, self.height);
+		}
+		self.data[y * self.width + x] = color;
+	}
+	pub fn pixels<F: FnMut(usize, usize, &mut Color)>(&mut self, mut f: F) {
 		let width = self.width;
 		let height = self.height;
-		let length = self.data.len();
 		for (ind, item) in self.data.iter_mut().enumerate() {
 			let x = ind % width;
 			let y = height - ind / width;
 
 			f(x, y, item);
-
-			// progress.call1(&JsValue::NULL, &JsValue::from(ind as f32 / length as f32));
-			p(ind as f32 / length as f32);
 		};
 	}
 }
