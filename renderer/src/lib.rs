@@ -1,11 +1,16 @@
 #![allow(dead_code, unused_imports)]
+use rand::{Rng, SeedableRng};
+use rand::rngs::SmallRng;
 
 use wee_alloc;
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 mod image;
 use image::{Image, Color};
 mod vector;
 use vector::Vector;
+mod ffi;
 
 #[derive(Debug)]
 #[derive(Clone, Copy)]
@@ -36,25 +41,6 @@ impl Ray {
 	}
 }
 
-
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-extern "C" {
-	fn progress(prog: f32);
-	fn console_log(ptr: *const u8, length: u32);
-}
-fn log_safe(s: &str) {
-	unsafe {
-		console_log(s.as_ptr(), s.len() as u32);
-	}
-}
-
-fn progress_safe(prog: f32) {
-	unsafe {
-		progress(prog);
-	}
-}
 
 static mut RENDER_OUTPUT: Option<Box<[u8]>> = None;
 
@@ -135,7 +121,11 @@ impl<T: Hittable> Hittable for Vec<T> {
 extern "C" fn render(width: usize, height: usize) -> *const u8 {
 	let mut output = Image::new(width, height);
 
-	log_safe(format!("About to render image: {}x{}", width, height).as_str());
+	let seed = ffi::get_seed();
+	ffi::log(format!("Got an rng seed of: {:?}", seed).as_str());
+
+
+	ffi::log(format!("About to render image: {}x{}", width, height).as_str());
 
 
 	// TODO: Use real camera properties (FOV, etc.)
@@ -167,12 +157,12 @@ extern "C" fn render(width: usize, height: usize) -> *const u8 {
 			],
 			&ray
 		);
-	}, progress_safe);
+	}, ffi::progress);
 	
 	let bytes: Box<[u8]> = output.into();
 	let ptr = bytes.as_ptr();
 	
-	log_safe(format!("Output located at: {:?}", ptr).as_str());
+	ffi::log(format!("Output located at: {:?}", ptr).as_str());
 
 	unsafe {
 		RENDER_OUTPUT.replace(bytes);
