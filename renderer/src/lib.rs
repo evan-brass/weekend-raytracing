@@ -17,6 +17,23 @@ impl Ray {
 	fn at(&self, t: f32) -> Vector {
 		self.origin + self.direction * t
 	}
+	fn make_intersection(&self, position: Vector, normal: Vector, t: f32) -> Intersection {
+		let hit_side = if Vector::dot(&self.direction, &normal) > 0.0 {
+			GeometrySide::Inside
+		} else {
+			GeometrySide::Outside
+		};
+		let normal = match hit_side {
+			GeometrySide::Inside => normal * -1.0,
+			GeometrySide::Outside => normal
+		};
+		Intersection {
+			t,
+			position,
+			normal,
+			hit_side
+		}
+	}
 }
 
 
@@ -41,44 +58,76 @@ fn progress_safe(prog: f32) {
 
 static mut RENDER_OUTPUT: Option<Box<[u8]>> = None;
 
-struct Scene {
-	pub spheres: Vec<Sphere>
-}
-impl Scene {
-	fn ray_color(&self, ray: &Ray) -> Color {
-		for sphere in self.spheres.iter() {
-			if let Some(intersection) = sphere.hit(ray) {
-				return (((intersection - sphere.center).unit() + Vector::new(1.0, 1.0, 1.0)) * 0.5).into();
-			}
-		}
-		let unit_direction = ray.direction.unit();
-		let t = 0.5*(unit_direction.y + 1.0);
-		(Vector::new(1.0, 1.0, 1.0)*(1.0-t) + Vector::new(0.5, 0.7, 1.0)*t).into()
+fn ray_color<T: Hittable>(object: T, ray: &Ray) -> Color {
+	if let Some(intersection) = object.hit(ray, 0.0, 1000.0) {
+		return ((intersection.normal + Vector::new(1.0, 1.0, 1.0)) * 0.5).into();
 	}
+	let unit_direction = ray.direction.unit();
+	let t = 0.5*(unit_direction.y + 1.0);
+	(Vector::new(1.0, 1.0, 1.0)*(1.0-t) + Vector::new(0.5, 0.7, 1.0)*t).into()
 }
 
 
-trait Hit {
-	fn hit(&self, ray: &Ray) -> Option<Vector>;
+enum GeometrySide {
+	Inside,
+	Outside
+}
+struct Intersection {
+	t: f32,
+	position: Vector,
+	normal: Vector,
+	hit_side: GeometrySide
+}
+trait Hittable {
+	fn hit(&self, ray: &Ray, tmin: f32, tmax: f32) -> Option<Intersection>;
 }
 struct Sphere {
 	center: Vector,
 	radius: f32
 }
-// TODO: Produce a more useful intersection from the hit (position, normal, etc.)
-impl Hit for Sphere {
-	fn hit(&self, ray: &Ray) -> Option<Vector> {
+impl Hittable for Sphere {
+	fn hit(&self, ray: &Ray, tmin: f32, tmax: f32) -> Option<Intersection> {
 		let oc = ray.origin - self.center;
 		let a = ray.direction.length_squared();
 		let half_b = Vector::dot(&oc, &ray.direction);
 		let c = oc.length_squared() - self.radius * self.radius;
 		let discriminant = half_b * half_b - a * c;
-		if discriminant > 0.0 {
-			let t = (-half_b - discriminant.sqrt()) / a;
-			Some(ray.at(t))
-		} else {
-			None
+		
+		if discriminant <= 0.0 {
+			// No intersection solutions for this ray.
+			return None;
 		}
+
+		let root = discriminant.sqrt();
+		let mut t = (-half_b - root) / a;
+		if t < tmin || t > tmax {
+			t = (-half_b + root) / a;
+			if t < tmin || t > tmax {
+				// Neither intersection solution is in range.
+				return None;
+			}
+		}
+		let position = ray.at(t);
+		// let normal = (position - self.center) / self.radius;
+		let normal = (position - self.center).unit();
+		return Some(ray.make_intersection(position, normal, t));
+	}
+}
+impl<T: Hittable> Hittable for Vec<T> {
+	fn hit(&self, ray: &Ray, tmin: f32, tmax: f32) -> Option<Intersection> {
+		let mut closest: Option<Intersection> = None;
+		for item in self.iter() {
+			if let Some(intersection) = item.hit(ray, tmin, tmax) {
+				match closest {
+					Some(Intersection { t, .. }) if intersection.t < t => {
+						closest = Some(intersection)
+					},
+					None => closest = Some(intersection),
+					_ => ()
+				}
+			}
+		}
+		closest
 	}
 }
 
@@ -96,14 +145,6 @@ extern "C" fn render(width: usize, height: usize) -> *const u8 {
 	let vertical = Vector::new(0.0, vec_height, 0.0);
 	let origin = Vector::default();
 
-	let scene = Scene {
-		spheres: vec![
-			Sphere {
-				center: Vector::new(0.0, 0.0, -1.0),
-				radius: 0.5
-			}
-		]
-	};
 
 	output.pixels(|x, y, color| {
 		let u = x as f32 / width as f32;
@@ -113,7 +154,19 @@ extern "C" fn render(width: usize, height: usize) -> *const u8 {
 			origin,
 			direction: lower_left_corner + horizontal*u + vertical*v
 		};
-		*color = scene.ray_color(&ray);
+		*color = ray_color(
+			vec![
+				Sphere {
+					center: Vector::new(0.5, 0.0, -1.0),
+					radius: 0.5
+				},
+				Sphere {
+					center: Vector::new(-0.5, 0.0, -2.0),
+					radius: 0.5
+				}
+			],
+			&ray
+		);
 	}, progress_safe);
 	
 	let bytes: Box<[u8]> = output.into();
