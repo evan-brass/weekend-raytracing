@@ -59,7 +59,7 @@ fn progress_safe(prog: f32) {
 static mut RENDER_OUTPUT: Option<Box<[u8]>> = None;
 
 fn ray_color<T: Hittable>(object: T, ray: &Ray) -> Color {
-	if let Some(intersection) = object.hit(ray, 0.0, 1000.0) {
+	if let Some(intersection) = object.hit(ray, 0.0, std::f32::INFINITY) {
 		return ((intersection.normal + Vector::new(1.0, 1.0, 1.0)) * 0.5).into();
 	}
 	let unit_direction = ray.direction.unit();
@@ -157,12 +157,12 @@ extern "C" fn render(width: usize, height: usize) -> *const u8 {
 		*color = ray_color(
 			vec![
 				Sphere {
-					center: Vector::new(0.5, 0.0, -1.0),
+					center: Vector::new(0.0, 0.0, -1.0),
 					radius: 0.5
 				},
 				Sphere {
-					center: Vector::new(-0.5, 0.0, -2.0),
-					radius: 0.5
+					center: Vector::new(0.0,-100.5,-1.0), 
+					radius: 100.0
 				}
 			],
 			&ray
