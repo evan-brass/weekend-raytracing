@@ -1,5 +1,6 @@
 use crate::vector::Vector;
 use crate::image::Color;
+use rand::Rng;
 
 #[derive(Debug)]
 #[derive(Clone, Copy)]
@@ -30,13 +31,38 @@ impl Ray {
 	}
 }
 
-pub fn ray_color<T: Hittable>(object: &T, ray: &Ray) -> Color {
-	if let Some(intersection) = object.hit(ray, 0.0, std::f32::INFINITY) {
-		return ((intersection.normal + Vector::new(1.0, 1.0, 1.0)) * 0.5).into();
+fn random_unit_vector<T: Rng>(rng: &mut T) -> Vector {
+	let a = rng.gen_range(0.0, 2.0 * std::f32::consts::PI);
+    let z: f32 = rng.gen_range(-1.0, 1.0);
+    let r = (1.0 - z * z).sqrt();
+    return Vector::new(r * a.cos(), r * a.sin(), z);
+	// loop {
+	// 	let test = Vector::new(
+	// 		rng.gen_range(-1.0, 1.0),
+	// 		rng.gen_range(-1.0, 1.0),
+	// 		rng.gen_range(-1.0, 1.0)
+	// 	);
+	// 	if test.length() < 1.0 {
+	// 		break test;
+	// 	}
+	// }
+}
+
+pub fn ray_color<T: Hittable, R: Rng>(object: &T, rng: &mut R, ray: &Ray, depth_left: usize) -> Vector {
+	if depth_left == 0 {
+		return Vector::new(0.0, 0.0, 0.0);
+	}
+
+	if let Some(intersection) = object.hit(ray, 0.001, std::f32::INFINITY) {
+		let unit = random_unit_vector(rng);
+		return ray_color(object, rng, &Ray {
+			origin: intersection.position,
+			direction: intersection.normal + unit
+		}, depth_left - 1) * 0.5;
 	}
 	let unit_direction = ray.direction.unit();
 	let t = 0.5*(unit_direction.y + 1.0);
-	(Vector::new(1.0, 1.0, 1.0)*(1.0-t) + Vector::new(0.5, 0.7, 1.0)*t).into()
+	Vector::new(1.0, 1.0, 1.0) * (1.0-t) + Vector::new(0.5, 0.7, 1.0) * t
 }
 
 pub enum GeometrySide {

@@ -13,7 +13,7 @@ impl Camera {
 	pub fn new(fov: f32, aspect: f32) -> Self {
 		Camera { fov, aspect }
 	}
-	pub fn render<R: Rng, F: Fn(Ray) -> Color, P: Fn(f32)>(&self, width: usize, samples: usize, rng: &mut R, cast: F, progress: P) -> Image {
+	pub fn render<R: Rng, F: FnMut(Ray) -> Vector, P: Fn(f32)>(&self, width: usize, samples: usize, rng: &mut R, mut cast: F, progress: P) -> Image {
 		let height = (self.aspect * width as f32) as usize;
 		let origin = Vector::new(0.0, 0.0, 0.0);
 		
@@ -33,10 +33,7 @@ impl Camera {
 
 		output.pixels(|x, y, color| {
 			// Accumulate the color from the samples:
-			let mut acc_r: usize = 0;
-			let mut acc_g: usize = 0;
-			let mut acc_b: usize = 0;
-			let mut acc_a: usize = 0;
+			let mut accum = Vector::default();
 
 			for _ in 0..samples {
 				// TODO: Simplify
@@ -51,24 +48,20 @@ impl Camera {
 					)
 				};
 
-				let sample = cast(ray);
-				acc_r += sample.red as usize;
-				acc_g += sample.green as usize;
-				acc_b += sample.blue as usize;
-				acc_a += sample.alpha as usize;
+				accum = accum + cast(ray);
 
 				// Supply progress information:
 				casts_done += 1;
 				progress(casts_done as f32 / casts_total as f32);
 			}
 
-			// Then return the average:
-			*color = Color::new(
-				(acc_r / samples) as u8,
-				(acc_g / samples) as u8,
-				(acc_b / samples) as u8,
-				(acc_a / samples) as u8
-			);
+			// Average...
+			accum = accum / samples as f32;
+			// ...and gamma correct:
+			accum.x = accum.x.sqrt().clamp(0.0, 0.999);
+			accum.y = accum.y.sqrt().clamp(0.0, 0.999);
+			accum.z = accum.z.sqrt().clamp(0.0, 0.999);
+			*color = accum.into();
 		});
 
 		output

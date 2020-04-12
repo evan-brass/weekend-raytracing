@@ -1,4 +1,5 @@
 use std::convert::Into;
+use std::ops::Mul;
 
 // Color:
 #[repr(packed)]
@@ -20,6 +21,15 @@ impl Default for Color {
 	fn default() -> Self {
 		// Debug color (CSS hotpink)
 		Self::new(255, 105, 180, 255)
+	}
+}
+impl Mul<f32> for Color {
+	type Output = Color;
+	fn mul(mut self, other: f32) -> Color {
+		self.red = (self.red as f32 * other).round() as u8;
+		self.green = (self.green as f32 * other).round() as u8;
+		self.blue = (self.blue as f32 * other).round() as u8;
+		self
 	}
 }
 

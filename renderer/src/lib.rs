@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_imports)]
+#![feature(clamp)]
 use std::panic;
 
 use rand::{Rng, SeedableRng};
@@ -40,7 +41,8 @@ extern "C" fn init() {
 
 #[no_mangle]
 extern "C" fn render(aspect: f32, width: usize) -> *const u8 {
-	let mut rng = SmallRng::from_seed(ffi::get_seed());
+	let mut sampling_rng = SmallRng::from_seed(ffi::get_seed());
+	let mut bounce_rng = SmallRng::from_seed(ffi::get_seed());
 
 	ffi::log(format!("About to render image: {}x{}", width as f32, width as f32 * aspect).as_str());
 
@@ -61,8 +63,8 @@ extern "C" fn render(aspect: f32, width: usize) -> *const u8 {
 		}
 	];
 
-	let output = camera.render(width, 100, &mut rng, |ray| {
-		ray_color(&scene, &ray)
+	let output = camera.render(width, 100, &mut sampling_rng, |ray| {
+		ray_color(&scene, &mut bounce_rng, &ray, 50).into()
 	}, ffi::progress);
 	
 	let bytes: Box<[u8]> = output.into();
