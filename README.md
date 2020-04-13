@@ -15,5 +15,14 @@ Then visit <https://localhost/> in your web browser.
 I also intend to have a hosted version on github pages.
 TODO: insert github pages link
 
+# Output:
+Images generated:
+Metalics:
+![Image rendered of metalic and diffuse spheres](metalics.png)
+Diffuse:
+![Image rendered of diffuse spheres](diffuse.png)
+Normals:
+![Image rendered of diffuse spheres](normals.png)
+
 # Source:
 I'm following the tutorial here: <https://raytracing.github.io/books/RayTracingInOneWeekend.html>
