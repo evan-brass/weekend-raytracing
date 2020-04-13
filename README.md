@@ -18,10 +18,15 @@ TODO: insert github pages link
 # Output:
 Images generated:
 Metalics:
+
 ![Image rendered of metalic and diffuse spheres](metalics.png)
+
 Diffuse:
+
 ![Image rendered of diffuse spheres](diffuse.png)
+
 Normals:
+
 ![Image rendered of diffuse spheres](normals.png)
 
 # Source:
