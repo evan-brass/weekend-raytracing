@@ -1,9 +1,7 @@
 #![allow(dead_code, unused_imports)]
 #![feature(clamp)]
 use std::panic;
-
-use rand::{Rng, SeedableRng};
-use rand::rngs::SmallRng;
+use std::rc::Rc;
 
 mod image;
 mod vector;
@@ -11,6 +9,9 @@ mod ffi;
 mod objects;
 mod trace;
 mod camera;
+mod material;
+mod rng;
+use material::{ Lambertian, Metalic };
 use image::{ Image, Color };
 use vector::Vector;
 use trace::{ Ray, ray_color };
@@ -20,10 +21,6 @@ use wee_alloc;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 static mut RENDER_OUTPUT: Option<Box<[u8]>> = None;
-
-// fn multi_sample<F: Fn(&Ray) -> Color>(rng: &mut SmallRng, x: usize, y: usize, width: usize, height: usize, f: F, sample_count: usize) -> Color {
-// 	
-// }
 
 #[no_mangle]
 extern "C" fn init() {
@@ -41,8 +38,6 @@ extern "C" fn init() {
 
 #[no_mangle]
 extern "C" fn render(aspect: f32, width: usize) -> *const u8 {
-	let mut sampling_rng = SmallRng::from_seed(ffi::get_seed());
-	let mut bounce_rng = SmallRng::from_seed(ffi::get_seed());
 
 	ffi::log(format!("About to render image: {}x{}", width as f32, width as f32 * aspect).as_str());
 
@@ -55,16 +50,38 @@ extern "C" fn render(aspect: f32, width: usize) -> *const u8 {
 	let scene = vec![
 		objects::Sphere {
 			center: Vector::new(0.0, 0.0, -1.0),
-			radius: 0.5
+			radius: 0.5,
+			material: Rc::new(Lambertian {
+				albedo: Vector::new(0.7, 0.3, 0.3)
+			})
 		},
 		objects::Sphere {
 			center: Vector::new(0.0,-100.5,-1.0), 
-			radius: 100.0
+			radius: 100.0,
+			material: Rc::new(Lambertian {
+				albedo: Vector::new(0.8, 0.8, 0.0)
+			})
+		},
+		objects::Sphere {
+			center: Vector::new(1.0, 0.0, -1.0), 
+			radius: 0.5,
+			material: Rc::new(Metalic {
+				albedo: Vector::new(0.8, 0.6, 0.2),
+				fuzz: 1.0
+			})
+		},
+		objects::Sphere {
+			center: Vector::new(-1.0, 0.0, -1.0), 
+			radius: 0.5,
+			material: Rc::new(Metalic {
+				albedo: Vector::new(0.8, 0.8, 0.8),
+				fuzz: 0.3
+			})
 		}
 	];
 
-	let output = camera.render(width, 100, &mut sampling_rng, |ray| {
-		ray_color(&scene, &mut bounce_rng, &ray, 50).into()
+	let output = camera.render(width, 100, |ray| {
+		ray_color(&scene, &ray, 50).into()
 	}, ffi::progress);
 	
 	let bytes: Box<[u8]> = output.into();

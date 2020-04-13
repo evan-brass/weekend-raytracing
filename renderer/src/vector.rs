@@ -48,6 +48,16 @@ impl Vector {
 			x, y, z
 		}
 	}
+	pub fn mult_parts(v1: Self, v2: Self) -> Self {
+		Self {
+			x: v1.x * v2.x,
+			y: v1.y * v2.y,
+			z: v1.z * v2.z,
+		}
+	}
+	pub fn reflect(v: Self, n: Self) -> Self {
+		v - n * 2.0 * Self::dot(&v,&n)
+	}
 }
 impl Add for Vector {
 	type Output = Self;

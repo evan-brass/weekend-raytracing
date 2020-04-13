@@ -2,6 +2,7 @@ use crate::vector::Vector;
 use crate::image::{ Image, Color };
 use crate::trace::Ray;
 use crate::ffi;
+use crate::rng::get_rng;
 use rand::Rng;
 
 pub struct Camera {
@@ -13,7 +14,7 @@ impl Camera {
 	pub fn new(fov: f32, aspect: f32) -> Self {
 		Camera { fov, aspect }
 	}
-	pub fn render<R: Rng, F: FnMut(Ray) -> Vector, P: Fn(f32)>(&self, width: usize, samples: usize, rng: &mut R, mut cast: F, progress: P) -> Image {
+	pub fn render<F: FnMut(Ray) -> Vector, P: Fn(f32)>(&self, width: usize, samples: usize, mut cast: F, progress: P) -> Image {
 		let height = (self.aspect * width as f32) as usize;
 		let origin = Vector::new(0.0, 0.0, 0.0);
 		
@@ -32,6 +33,8 @@ impl Camera {
 		).as_str());
 
 		output.pixels(|x, y, color| {
+			let rng = get_rng();
+
 			// Accumulate the color from the samples:
 			let mut accum = Vector::default();
 

@@ -1,9 +1,12 @@
 use crate::vector::Vector;
 use crate::trace::{ Ray, Hittable, Intersection };
+use crate::material::Material;
+use std::rc::Rc;
 
 pub struct Sphere {
 	pub center: Vector,
-	pub radius: f32
+	pub radius: f32,
+	pub material: Rc<dyn Material>
 }
 impl Hittable for Sphere {
 	fn hit(&self, ray: &Ray, tmin: f32, tmax: f32) -> Option<Intersection> {
@@ -30,6 +33,6 @@ impl Hittable for Sphere {
 		let position = ray.at(t);
 		// let normal = (position - self.center) / self.radius;
 		let normal = (position - self.center).unit();
-		return Some(ray.make_intersection(position, normal, t));
+		return Some(ray.make_intersection(position, normal, t, self.material.clone()));
 	}
 }

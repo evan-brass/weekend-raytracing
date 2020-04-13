@@ -1,6 +1,7 @@
 use crate::vector::Vector;
 use crate::image::Color;
-use rand::Rng;
+use crate::material::Material;
+use std::rc::Rc;
 
 #[derive(Debug)]
 #[derive(Clone, Copy)]
@@ -12,7 +13,7 @@ impl Ray {
 	pub fn at(&self, t: f32) -> Vector {
 		self.origin + self.direction * t
 	}
-	pub fn make_intersection(&self, position: Vector, normal: Vector, t: f32) -> Intersection {
+	pub fn make_intersection(&self, position: Vector, normal: Vector, t: f32, material: Rc<dyn Material>) -> Intersection {
 		let hit_side = if Vector::dot(&self.direction, &normal) > 0.0 {
 			GeometrySide::Inside
 		} else {
@@ -26,43 +27,31 @@ impl Ray {
 			t,
 			position,
 			normal,
-			hit_side
+			hit_side,
+			material
 		}
 	}
 }
 
-fn random_unit_vector<T: Rng>(rng: &mut T) -> Vector {
-	let a = rng.gen_range(0.0, 2.0 * std::f32::consts::PI);
-    let z: f32 = rng.gen_range(-1.0, 1.0);
-    let r = (1.0 - z * z).sqrt();
-    return Vector::new(r * a.cos(), r * a.sin(), z);
-	// loop {
-	// 	let test = Vector::new(
-	// 		rng.gen_range(-1.0, 1.0),
-	// 		rng.gen_range(-1.0, 1.0),
-	// 		rng.gen_range(-1.0, 1.0)
-	// 	);
-	// 	if test.length() < 1.0 {
-	// 		break test;
-	// 	}
-	// }
-}
-
-pub fn ray_color<T: Hittable, R: Rng>(object: &T, rng: &mut R, ray: &Ray, depth_left: usize) -> Vector {
+pub fn ray_color<T: Hittable>(object: &T, ray: &Ray, depth_left: usize) -> Vector {
+	// Return black when we run out of depth
 	if depth_left == 0 {
 		return Vector::new(0.0, 0.0, 0.0);
 	}
 
+	// Use the material to figure out the color:
 	if let Some(intersection) = object.hit(ray, 0.001, std::f32::INFINITY) {
-		let unit = random_unit_vector(rng);
-		return ray_color(object, rng, &Ray {
-			origin: intersection.position,
-			direction: intersection.normal + unit
-		}, depth_left - 1) * 0.5;
+		if let Some((scatter_ray, attenuation)) = intersection.material.scatter(ray, &intersection) {
+			return Vector::mult_parts(attenuation, ray_color(object, &scatter_ray, depth_left - 1));
+		} else {
+			return Vector::new(0.0, 0.0, 0.0);
+		}
 	}
+
+	// Background-color:
 	let unit_direction = ray.direction.unit();
 	let t = 0.5*(unit_direction.y + 1.0);
-	Vector::new(1.0, 1.0, 1.0) * (1.0-t) + Vector::new(0.5, 0.7, 1.0) * t
+	return Vector::new(1.0, 1.0, 1.0) * (1.0-t) + Vector::new(0.5, 0.7, 1.0) * t;
 }
 
 pub enum GeometrySide {
@@ -73,7 +62,8 @@ pub struct Intersection {
 	pub t: f32,
 	pub position: Vector,
 	pub normal: Vector,
-	pub hit_side: GeometrySide
+	pub hit_side: GeometrySide,
+	pub material: Rc<dyn Material>
 }
 pub trait Hittable {
 	fn hit(&self, ray: &Ray, tmin: f32, tmax: f32) -> Option<Intersection>;
